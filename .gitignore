@@ -1,0 +1,22 @@
+# Python virtual environment
+marimo-env/
+venv/
+.env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model artifacts (optional, kalau besar)
+*.pkl
+*.joblib
+
+# Logs
+*.log

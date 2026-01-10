@@ -1,0 +1,8 @@
+feature,importance
+distance_km,0.9639584
+distance_weight_interaction,0.02991619
+delivery_rating,0.0056448937
+package_weight_kg,0.0004805754
+distance_km_power_2,0.0
+distance_weight_interaction_power_2,0.0
+delivery_rating_power_2,0.0
