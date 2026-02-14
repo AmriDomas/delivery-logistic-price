@@ -1,0 +1,8 @@
+# Official Apache Spark image
+FROM apache/spark:3.5.1
+
+# Working directory for Spark jobs
+WORKDIR /opt/spark-apps
+
+# Default: Spark Master (for demo / infra presence)
+CMD ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]

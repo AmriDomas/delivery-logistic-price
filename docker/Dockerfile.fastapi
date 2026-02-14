@@ -1,0 +1,16 @@
+FROM python:3.10
+
+WORKDIR /app
+
+# Upgrade pip + timeout panjang
+RUN pip install --upgrade pip
+
+COPY requirements-api.txt .
+RUN pip install \
+    --default-timeout=1000 \
+    --no-cache-dir \
+    -r requirements-api.txt
+
+COPY src ./src
+
+CMD ["uvicorn", "src.serving.api:app", "--host", "0.0.0.0", "--port", "8000"]

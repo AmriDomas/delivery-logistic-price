@@ -1,0 +1,40 @@
+{
+  "title": "Delivery Cost API Monitoring",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Prediction Requests",
+      "targets": [
+        {
+          "expr": "prediction_requests_total",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 4 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Prediction Latency (p95)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(prediction_latency_seconds_bucket[1m])) by (le))",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 8, "y": 0, "w": 16, "h": 6 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Request Rate (RPS)",
+      "targets": [
+        {
+          "expr": "rate(prediction_requests_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 6 }
+    }
+  ],
+  "schemaVersion": 37,
+  "version": 1
+}

@@ -1,0 +1,16 @@
+project:
+  name: delivery-logistics-mlops
+  target: delivery_cost
+
+paths:
+  raw_data: data/raw/Delivery_Logistics.csv
+  model_output: artifacts/models
+  mlflow_uri: http://mlflow:5000
+
+training:
+  test_size: 0.2
+  random_state: 42
+  cv: 5
+
+monitoring:
+  drift_threshold: 0.15

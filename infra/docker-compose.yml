@@ -1,0 +1,202 @@
+services:
+  # =====================
+  # POSTGRES (MLFLOW BACKEND STORE)
+  # =====================
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow -d mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =====================
+  # MINIO
+  # =====================
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  # =====================
+  # MLFLOW
+  # =====================
+  mlflow:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mlflow
+    container_name: mlflow
+    depends_on:
+      - postgres
+      - minio
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql://mlflow:mlflow@postgres:5432/mlflow
+      MLFLOW_ARTIFACT_ROOT: s3://mlflow-artifacts
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
+      --default-artifact-root s3://mlflow-artifacts
+      --host 0.0.0.0
+      --port 5000
+
+
+
+  # =====================
+  # REDPANDA (Kafka-compatible streaming)
+  # =====================
+  redpanda:
+    image: redpandadata/redpanda:v23.3.9
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    restart: unless-stopped
+
+
+  # =====================
+  # SPARK
+  # =====================
+  spark:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.spark
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+    restart: unless-stopped
+
+
+  # =====================
+  # FASTAPI
+  # =====================
+  fastapi:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.fastapi
+    container_name: infra-fastapi
+    depends_on:
+      - mlflow
+      - minio
+    ports:
+      - "8000:8000"
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+
+
+  # =====================
+  # STREAMLIT
+  # =====================
+  streamlit:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.streamlit
+    container_name: streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+    depends_on:
+      - mlflow
+
+
+  # =====================
+  # PROMETHEUS
+  # =====================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+
+  # =====================
+  # GRAFANA
+  # =====================
+  grafana:
+    image: grafana/grafana:10.2.3
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+
+  # =====================
+  # AIRFLOW INIT
+  # =====================
+  airflow-init:
+    image: apache/airflow:2.8.1
+    command: airflow db init
+    volumes:
+      - ../airflow:/opt/airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+
+
+  # =====================
+  # AIRFLOW
+  # =====================
+  airflow:
+    image: apache/airflow:2.8.1
+    depends_on:
+      - airflow-init
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+    volumes:
+      - ../airflow:/opt/airflow
+      - ../src:/opt/airflow/src
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+
+# =====================
+# VOLUMES
+# =====================
+volumes:
+  postgres_data:
+  minio_data:

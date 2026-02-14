@@ -1,0 +1,26 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# System deps (SHAP & LightGBM safe)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip
+
+COPY requirements-ui.txt .
+RUN pip install \
+    --no-cache-dir \
+    --default-timeout=1000 \
+    -r requirements-ui.txt
+
+# Copy UI code
+COPY ui ./ui
+
+# Streamlit default port
+EXPOSE 8501
+
+CMD ["streamlit", "run", "ui/app.py", "--server.address=0.0.0.0", "--server.port=8501"]
