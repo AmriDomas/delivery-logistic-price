@@ -117,7 +117,7 @@ Response:
    - MLflow model registry
    - REST API deployment
    - Monitoring and observability
-   - Docker-based MLOps architecture
+   - Docker based MLOps architecture
 ## Author
 
 Amri Domas Data Science • Machine Learning • AI Engineering • MLOps
